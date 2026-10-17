@@ -1,0 +1,8 @@
+sbi-ha-gateway-client
+Copyright 2026 3eAI Labs Ltd
+
+This product includes software developed at 3eAI Labs Ltd (https://3eai-labs.com/).
+Licensed under the Apache License 2.0 — see the LICENSE file.
+
+This product does not bundle third-party code and has no Go module dependencies
+outside the standard library.

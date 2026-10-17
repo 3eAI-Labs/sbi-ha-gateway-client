@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/3eAI-Labs/sbi-ha-gateway-client/security/advisories/new
+    about: Report privately — do not open a public issue.
+  - name: Gateway behaviour
+    url: https://github.com/3eAI-Labs/sbi-ha-gateway/issues
+    about: Problems in the SBI API, NATS handling, the admin port or the Helm chart belong there.
