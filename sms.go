@@ -92,7 +92,9 @@ const (
 	DeliveryDelivered = "DELIVERED"
 	DeliveryFailed    = "FAILED"
 	// DeliveryPending is a transient failure: the gateway also asks JetStream to
-	// redeliver the SbiOtaMessage.
+	// redeliver the SbiOtaMessage. On the last delivery a transient failure is
+	// DeliveryFailed instead, with Cause "RETRIES_EXHAUSTED" and the transient cause in
+	// BearerMeta "lastCause".
 	DeliveryPending = "PENDING"
 )
 

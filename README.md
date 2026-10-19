@@ -62,6 +62,7 @@ the common ones of TS 29.500 Table 5.2.7.2-1.
 | Purpose | Subject | Message |
 |---------|---------|---------|
 | Deliver a notification to a network function's callback URI | `5g.data.notify` (core publish) | `NotificationPayload` |
+| A notification the gateway could not deliver, with the network function's last answer | `5g.data.notify.failed` (core publish, from the gateway) | `NotificationFailure` |
 | Ask which SMSF serves a subscriber | `sbi.outbound.nudm.uecm.request` (core request/reply) | `NudmUecmMessage` → `NudmUecmMessage` |
 | Send an MT SMS through the serving SMSF (Nsmsf_SMService MtForwardSm; the SMS as an RP-DATA) | `sbi.outbound.nsmsf.send.request` (JetStream work queue) | `SbiOtaMessage` |
 | Result of each SMS the gateway processed | `ota.delivery.event` | `DeliveryEvent` |
@@ -69,7 +70,9 @@ the common ones of TS 29.500 Table 5.2.7.2-1.
 `sbi.outbound.nsmsf.send.request` is the one subject that is meant to be in a stream: your
 application creates the stream `OTA_OUTBOUND` on it, and the gateway creates its durable consumer
 `sbi-gateway-smsf`. The gateway asks for redelivery (up to three deliveries) when the SMSF fails
-transiently, and reports `PENDING` in the `DeliveryEvent` each time.
+transiently, and reports `PENDING` in the `DeliveryEvent` each time but the last. A transient
+failure on the third delivery is reported `FAILED` with cause `RETRIES_EXHAUSTED` and the transient
+cause in `BearerMeta` `lastCause`, so every SMS ends with `DELIVERED` or `FAILED`.
 
 ## Usage
 

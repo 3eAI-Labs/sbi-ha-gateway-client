@@ -4,6 +4,25 @@ All notable changes to `sbi-ha-gateway-client` are documented in this file.
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 versioning follows [SemVer](https://semver.org/) (pre-1.0: a minor version may be breaking).
 
+## [0.3.0] — 2026-10-19
+
+### Added
+
+- `SubjectDataNotifyFailed` (`5g.data.notify.failed`) and `NotificationFailure`. Gateway 0.3.0
+  publishes one for each `NotificationPayload` it did not deliver: the payload, `result` (one of
+  the `Notify*` constants), the last HTTP `status` and its `problemDetails`, `cause` and the
+  number of `attempts`. Gateway 0.2.x logged such a notification and dropped it.
+
+### Documentation
+
+- `SubjectSmsfSendRequest` names MtForwardSm, which the gateway calls since v0.2.0, not SendSMS.
+- `NotificationPayload.AlternateCallbackUris`: a network function that keeps failing, or answered
+  `Retry-After`, is not called until it has rested or the time has passed.
+
+- With gateway 0.3.0, a transient failure on the last of the three deliveries of an
+  `SbiOtaMessage` is reported `FAILED`, cause `RETRIES_EXHAUSTED`, the transient cause in
+  `BearerMeta` `lastCause`. Before, the last event was `PENDING` and nothing followed it.
+
 ## [0.2.0] — 2026-10-19
 
 ### Changed — breaking

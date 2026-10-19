@@ -22,7 +22,7 @@ var update = flag.Bool("update", false, "rewrite testdata/schema.golden")
 func TestWireSchema(t *testing.T) {
 	var lines []string
 	for _, root := range []any{
-		Request{}, Reply{}, NotificationPayload{},
+		Request{}, Reply{}, NotificationPayload{}, NotificationFailure{},
 		ErrorReply{},
 		NudmUecmMessage{}, SbiOtaMessage{}, DeliveryEvent{},
 	} {

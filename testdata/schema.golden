@@ -12,6 +12,15 @@ Reply.status int
 NotificationPayload.alternateCallbackUris []string
 NotificationPayload.callbackUri string
 NotificationPayload.changeItem json
+NotificationFailure.attempts int
+NotificationFailure.cause string
+NotificationFailure.notification object
+NotificationFailure.notification.alternateCallbackUris []string
+NotificationFailure.notification.callbackUri string
+NotificationFailure.notification.changeItem json
+NotificationFailure.problemDetails json
+NotificationFailure.result string
+NotificationFailure.status int
 ErrorReply.problemDetails object
 ErrorReply.problemDetails.cause string
 ErrorReply.problemDetails.detail string

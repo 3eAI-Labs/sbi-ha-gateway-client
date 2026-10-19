@@ -47,17 +47,22 @@ const (
 	// serves the subscriber, or an HTTP status and problem cause when there is none.
 	SubjectUecmRequest = "sbi.outbound.nudm.uecm.request"
 	// SubjectSmsfSendRequest is a JetStream work-queue subject carrying an SbiOtaMessage:
-	// the gateway sends the SMS with Nsmsf_SMService SendSMS (TS 29.540) and publishes a
+	// the gateway sends the SMS with Nsmsf_SMService MtForwardSm (TS 29.540) and publishes a
 	// DeliveryEvent. The stream (StreamSmsfSend) belongs to the application; the gateway
 	// only creates its durable consumer (ConsumerSmsfSend) on it.
 	SubjectSmsfSendRequest = "sbi.outbound.nsmsf.send.request"
 )
 
-// Gateway → application, published once per SbiOtaMessage it has processed.
+// Gateway → application events.
 const (
-	// SubjectDeliveryEvent carries a DeliveryEvent. The gateway publishes through JetStream
-	// when it is available, so a stream on this subject is expected.
+	// SubjectDeliveryEvent carries a DeliveryEvent, published once per SbiOtaMessage the
+	// gateway has processed. The gateway publishes through JetStream when it is available,
+	// so a stream on this subject is expected.
 	SubjectDeliveryEvent = "ota.delivery.event"
+	// SubjectDataNotifyFailed carries a NotificationFailure, published once for each
+	// NotificationPayload the gateway did not deliver. A core NATS publish: capture the
+	// subject in a stream to keep the events.
+	SubjectDataNotifyFailed = "5g.data.notify.failed"
 )
 
 // JetStream names used with SubjectSmsfSendRequest.
