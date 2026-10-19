@@ -22,11 +22,7 @@ var update = flag.Bool("update", false, "rewrite testdata/schema.golden")
 func TestWireSchema(t *testing.T) {
 	var lines []string
 	for _, root := range []any{
-		AuthRequest{}, AuthenticationInfoResult{}, AuthConfirmRequest{}, AuthConfirmReply{},
-		MobilityRequest{}, MobilityReply{}, MobilityQuery{},
-		Amf3GppAccessRegistration{}, SmfRegistration{}, SmsfRegistration{},
-		LocationInfoRequest{}, ProvideLocInfoResult{},
-		DataRequest{}, DataResponse{}, NotificationPayload{},
+		Request{}, Reply{}, NotificationPayload{},
 		ErrorReply{},
 		NudmUecmMessage{}, SbiOtaMessage{}, DeliveryEvent{},
 	} {

@@ -36,11 +36,15 @@ type NudmUecmMessage struct {
 
 // --- SMS through the serving SMSF (SubjectSmsfSendRequest) -----------------------------
 
-// SbiOtaMessage is the message on SubjectSmsfSendRequest.
+// SbiOtaMessage is the message on SubjectSmsfSendRequest: an MT SMS the gateway forwards to
+// the serving SMSF with Nsmsf_SMService MtForwardSm (TS 29.540: POST
+// .../ue-contexts/{supi}/send-mt-sms, a multipart/related body whose binary part is
+// Payload).
 //
-// The gateway handles Header.Service "Nsmsf_SMService" with Header.Operation "SendSMS"
-// only. The DeliveryEvent's TransactionID comes from Metadata "tx_id" (or
-// "transactionId", "transaction_id"), and is "unknown" when none is set.
+// The gateway handles Header.Service "Nsmsf_SMService" with Header.Operation "MtForwardSm"
+// ("SendSMS" is accepted as its former name). The DeliveryEvent's TransactionID comes from
+// Metadata "tx_id" (or "transactionId", "transaction_id"), and is "unknown" when none is
+// set.
 type SbiOtaMessage struct {
 	Header   SbiHeader         `json:"header"`
 	Routing  SbiRouting        `json:"routing"`
@@ -64,14 +68,26 @@ type SbiRouting struct {
 	Gpsi     string `json:"gpsi,omitempty"`
 }
 
-// SS7PayloadView carries the SMS TPDU: Encoding "BINARY", Content base64. The gateway
-// does not decode it.
+// SS7PayloadView carries the SMS: Encoding EncodingRPData, Content the RP-DATA (network to
+// mobile station, TS 24.011 clause 7.3.1.1) in base64 — RP-Message Reference, the Service
+// Centre address as RP-Originator Address, an empty RP-Destination Address and the
+// SMS-DELIVER TPDU as RP-User Data. MtForwardSm's JSON part has no Service Centre address,
+// so the payload carries it: this is the gateway's reading of TS 29.540 clause 6.1.6.4.2,
+// which states the encoding only as "TS 23.040 and TS 24.011". The gateway checks the
+// message type and sends the bytes unchanged; a payload in any other encoding, such as a
+// bare TPDU, fails.
 type SS7PayloadView struct {
 	Encoding string `json:"encoding"`
 	Content  string `json:"content"`
 }
 
-// Values of DeliveryEvent.Status.
+// EncodingRPData is SS7PayloadView.Encoding for an RP-DATA in base64.
+const EncodingRPData = "RP_DATA"
+
+// Values of DeliveryEvent.Status. For an SMS the SMSF accepted, the status comes from the
+// mobile station's report in the MtForwardSm response: RP-ACK is DeliveryDelivered,
+// RP-ERROR DeliveryFailed with Cause "RP_CAUSE_<n>" (TS 24.011 Table 8.4). The report
+// itself, base64, is in BearerMeta "deliveryReport".
 const (
 	DeliveryDelivered = "DELIVERED"
 	DeliveryFailed    = "FAILED"

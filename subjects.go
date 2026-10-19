@@ -3,39 +3,35 @@
 
 package sbiclient
 
-// Gateway → application, core NATS request/reply. The gateway sends the request when a
-// network function calls the matching operation of its HTTP/2 API and waits for the
-// reply, up to its request timeout, to build the HTTP response. Subscribe with a queue
-// group so that one instance of the application answers each request.
+// Gateway → application, core NATS request/reply. The gateway sends a Request when a
+// network function calls one of the operations it serves and waits for the reply, up to its
+// request timeout, to build the HTTP response. Subscribe with a queue group so that one
+// instance of the application answers each request.
 //
-// Every reply is a JSON object: the operation's result, or an ErrorReply. No reply in
-// time, or no application subscribed, is answered 504 TARGET_NF_NOT_REACHABLE; a reply
-// that is not a JSON object is answered 500.
+// Every reply is a JSON object: a Reply, or an ErrorReply. No reply in time, or no
+// application subscribed, is answered 504 TARGET_NF_NOT_REACHABLE; a reply the gateway
+// cannot use is answered 500.
 const (
-	// SubjectAuthRequest carries Nudm_UEAU Get (generate-auth-data, TS 29.503):
-	// AuthRequest → AuthenticationInfoResult. The reply carries authentication vectors
-	// (key material); restrict this subject with NATS permissions to the gateway and the
-	// authentication back end.
+	// SubjectAuthRequest carries the Nudm_UEAU operations other than auth-events
+	// (GenerateAuthData and the other generate-av operations). Their replies carry
+	// authentication vectors (key material): restrict this subject with NATS permissions to
+	// the gateway and the authentication back end.
 	SubjectAuthRequest = "5g.auth.request"
-	// SubjectAuthConfirm carries Nudm_UEAU ResultConfirmation (auth-events):
-	// AuthConfirmRequest → AuthConfirmReply.
+	// SubjectAuthConfirm carries the Nudm_UEAU auth-events operations, ConfirmAuth and
+	// DeleteAuth.
 	SubjectAuthConfirm = "5g.auth.confirm"
-	// SubjectMobilityRegistration carries Nudm_UECM registration changes: PUT and PATCH
-	// of the AMF registration (3GPP access), PUT, PATCH and DELETE of an SMF registration,
-	// PUT and DELETE of the SMSF registration (3GPP access): MobilityRequest →
-	// MobilityReply.
+	// SubjectMobilityRegistration carries the Nudm_UECM operations that change a
+	// registration: PUT, PATCH, DELETE, and the POSTs other than SendRoutingInfoSm.
 	SubjectMobilityRegistration = "5g.mobility.registration"
-	// SubjectMobilityQuery carries the Nudm_UECM GETs — the registration data sets or one
-	// registration, by MobilityQuery.Resource: MobilityQuery → a JSON object, which the
-	// gateway returns to the network function as the body of a 200.
+	// SubjectMobilityQuery carries the Nudm_UECM reads: the GETs and SendRoutingInfoSm.
 	SubjectMobilityQuery = "5g.mobility.query"
-	// SubjectLocationInfo carries Nudm_MT ProvideLocationInfo:
-	// LocationInfoRequest → ProvideLocInfoResult.
+	// SubjectLocationInfo carries Nudm_MT: QueryUeInfo and ProvideLocationInfo.
 	SubjectLocationInfo = "5g.mt.loc-info"
-	// SubjectDataQuery carries Nudr_DataRepository reads (HTTP GET): DataRequest → DataResponse.
+	// SubjectDataQuery carries the reads (HTTP GET) of Nudm_SDM, Nudm_EE, Nudm_PP and
+	// Nudr_DataRepository subscription data.
 	SubjectDataQuery = "5g.data.query"
-	// SubjectDataUpdate carries Nudr_DataRepository writes (HTTP PUT, PATCH, POST, DELETE):
-	// DataRequest → DataResponse.
+	// SubjectDataUpdate carries the changes (HTTP PUT, PATCH, POST, DELETE) of the same APIs,
+	// and Nudm_ReportSMDeliveryStatus.
 	SubjectDataUpdate = "5g.data.update"
 )
 

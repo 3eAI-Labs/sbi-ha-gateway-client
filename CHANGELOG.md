@@ -4,7 +4,42 @@ All notable changes to `sbi-ha-gateway-client` are documented in this file.
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 versioning follows [SemVer](https://semver.org/) (pre-1.0: a minor version may be breaking).
 
-## [Unreleased]
+## [0.2.0] — 2026-10-19
+
+### Changed — breaking
+
+- **The contract carries the specification's bodies verbatim.** One request type, `Request`, on
+  every gateway → application subject: `service`, `operation` (the operationId of the API's OpenAPI
+  definition), `method`, `path`, `params` (the path variables by the specification's names), `query`,
+  `contentType` and `body`, the network function's body unchanged. One reply type, `Reply`: `status`
+  (one of the operation's success statuses; 0 for its only one), `resourceId` (for a 201 that creates
+  a resource under the request URI) and `body`, returned to the network function unchanged.
+  `ErrorReply` is unchanged.
+- Removed: `AuthRequest`, `AuthenticationInfoRequest`, `AuthenticationInfoResult`,
+  `AuthenticationVector`, `ResynchronizationInfo`, `AuthConfirmRequest`, `AuthConfirmReply`,
+  `AuthEvent`, `MobilityRequest`, `MobilityReply`, `MobilityQuery`, `Amf3GppAccessRegistration`,
+  `SmfRegistration`, `SmsfRegistration`, `LocationInfoRequest`, `ProvideLocInfoRequest`,
+  `ProvideLocInfoResult`, `UserLocation`, `EutraLocation`, `NrLocation`, `N3gaLocation`, `Ecgi`,
+  `Ncgi`, `Tai`, `Guami`, `PlmnId`, `Snssai`, `DataRequest`, `DataResponse`, and the constants
+  `OpRegister`, `OpUpdate`, `OpDeregister`, `NfSMF` and `NfSMSF`. They re-modelled TS 29.503 by
+  hand and did not match it: the authentication result went to the AUSF as `authVector`/`kAusf`
+  without `authType` or `avType` where TS 29.503 Tables 6.3.6.2.3-1 and 6.3.6.2.5-1 define
+  `authenticationVector`/`kausf` and make both mandatory; information elements they did not model were
+  dropped; elements the specification defines as objects were strings. Decode bodies with the API's
+  OpenAPI data types instead.
+- **An MT SMS on `sbi.outbound.nsmsf.send.request` is an RP-DATA.** The gateway forwards it with
+  Nsmsf_SMService MtForwardSm (`send-mt-sms`, `multipart/related`), which TS 29.540 Table 5.2.1-1
+  gives the SMS-GMSC; v0.1.0's gateway used UplinkSMS (`sendsms`), the AMF's, with a JSON body.
+  - `SS7PayloadView` must carry `Encoding` `EncodingRPData` and the RP-DATA towards the UE
+    (TS 24.011 clause 7.3.1.1): the Service Centre address travels in it, since MtForwardSm's
+    JSON part has none.
+  - A bare TPDU fails with cause `PAYLOAD_NOT_RP_DATA`.
+  - `Header.Operation` is `MtForwardSm`; `SendSMS` is still accepted.
+  - The `DeliveryEvent` takes its status from the mobile station's report (RP-ACK: delivered;
+    RP-ERROR: failed, cause `RP_CAUSE_<n>`) and carries the report in `BearerMeta`
+    `deliveryReport`.
+- `Service*` constants for every API the gateway serves: `ServiceNudmUEAU`, `ServiceNudmUECM`,
+  `ServiceNudmMT` and `ServiceNudmRSDS` added.
 
 ## [0.1.0] — 2026-10-18
 

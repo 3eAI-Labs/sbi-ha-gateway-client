@@ -1,8 +1,9 @@
 # sbi-ha-gateway-client
 
 NATS wire contract for [sbi-ha-gateway](https://github.com/3eAI-Labs/sbi-ha-gateway), a gateway that
-serves part of a 5G core's service-based interface (Nudm, Nudr, Nsmsf; 3GPP TS 29.503, TS 29.504,
-TS 29.540) over HTTP/2 and bridges it to applications over NATS.
+serves the Nudm and Nudr APIs of a 5G core's service-based interface (3GPP TS 29.503, TS 29.504)
+over HTTP/2, calls the SMSF's Nsmsf_SMService (TS 29.540), and bridges both to applications over
+NATS.
 
 Licensed under the Apache License 2.0, separately from the gateway (AGPL-3.0-only), so a UDM/UDR back
 end, an SMS platform or any other application can link it under any licence.
@@ -19,33 +20,42 @@ The subjects and JSON envelopes of every NATS interface the gateway has.
 
 ### Network function → gateway → application
 
-The gateway sends a core NATS request when a network function calls its HTTP/2 API, and builds the
-HTTP response from the reply. Answer with a core subscription (`msg.Respond`), and keep these subjects
-out of JetStream streams: a stream that captures a subject answers every request with its own publish
+The gateway serves the operations of the Nudm APIs it routes (UEAU, UECM, SDM, EE, PP, MT, RSDS; TS 29.503)
+and of Nudr_DataRepository subscription data (TS 29.504, TS 29.505), as their OpenAPI definitions
+give them. For each call it checks the URI, its UE identifiers and the request body's media type and
+JSON, and sends a core NATS request; it builds the HTTP response from the reply. The bodies are the
+network function's and your application's, unchanged: decode them with the data types of the API's
+OpenAPI definition. Answer with a core subscription (`msg.Respond`), and keep these subjects out of
+JetStream streams: a stream that captures a subject answers every request with its own publish
 acknowledgement before your application can, and the gateway answers the network function 500.
 
-| SBI operation | Subject | Request → reply |
-|---------------|---------|-----------------|
-| Nudm_UEAU generate-auth-data | `5g.auth.request` | `AuthRequest` → `AuthenticationInfoResult` |
-| Nudm_UEAU auth-events | `5g.auth.confirm` | `AuthConfirmRequest` → `AuthConfirmReply` (`authEventId`) |
-| Nudm_UECM PUT, PATCH (AMF 3GPP access, SMF), DELETE (SMF, SMSF 3GPP access) | `5g.mobility.registration` | `MobilityRequest` → `MobilityReply` (`{}`, or `{"updated": true}` when a PUT replaced a registration) |
-| Nudm_UECM GET (registration data sets, AMF, SMSF, SMF registrations) | `5g.mobility.query` | `MobilityQuery` → a JSON object, returned to the network function |
-| Nudm_MT provide-loc-info | `5g.mt.loc-info` | `LocationInfoRequest` → `ProvideLocInfoResult` |
-| Nudr_DR, Nudm_SDM, Nudm_PP, Nudm_EE reads (GET) | `5g.data.query` | `DataRequest` → `DataResponse` |
-| The same services' writes (PUT, PATCH, POST, DELETE) | `5g.data.update` | `DataRequest` → `DataResponse` |
+Every request is a `Request`: `service` (the API name), `operation` (the operationId of its OpenAPI
+definition, such as `GenerateAuthData`, `3GppRegistration` or `GetAmData`), `method`, `path` (after
+`/{apiName}/{apiVersion}`), `params` (the path variables, by the specification's names), `query`,
+`contentType` and `body`.
 
-Every reply is a JSON object: the result in the table (`{}` where the gateway needs none), or an
-`ErrorReply` that refuses the request. The gateway answers the network function:
+| Operations | Subject |
+|------------|---------|
+| Nudm_UEAU, except auth-events: they return authentication vectors | `5g.auth.request` |
+| Nudm_UEAU auth-events (`ConfirmAuth`, `DeleteAuth`) | `5g.auth.confirm` |
+| Nudm_UECM changes (PUT, PATCH, DELETE, and the POSTs other than `SendRoutingInfoSm`) | `5g.mobility.registration` |
+| Nudm_UECM reads (GET, `SendRoutingInfoSm`) | `5g.mobility.query` |
+| Nudm_MT | `5g.mt.loc-info` |
+| Nudm_SDM, Nudm_EE, Nudm_PP, Nudr_DataRepository reads (GET) | `5g.data.query` |
+| The same APIs' changes (PUT, PATCH, POST, DELETE), and Nudm_ReportSMDeliveryStatus | `5g.data.update` |
+
+Reply with a `Reply` — `status`, `resourceId`, `body` — or an `ErrorReply`. The gateway answers the
+network function:
 
 | Reply | HTTP response | Audit event |
 |-------|---------------|-------------|
-| The result | 200, 201 or 204, as the operation defines | for state changes |
+| `Reply` | `status`: one of the success statuses the specification gives the operation (0: its only one), `body` as the `application/json` body (required except with 204). A 201 that creates a resource under the request URI needs `resourceId`: `Location` is the request URI plus `/<resourceId>`; a 201 whose resource is the request URI gets that as `Location` | for every operation but GET, with the operationId as the action |
 | `ErrorReply` `{"problemDetails": {...}}` | `problemDetails.status` (400–599), `problemDetails` as the `application/problem+json` body | none |
 | None within the gateway's request timeout, or no application subscribed | 504, cause `TARGET_NF_NOT_REACHABLE` | none |
-| Not a JSON object, a `problemDetails` without a 4xx/5xx `status`, or a JetStream acknowledgement | 500, cause `SYSTEM_FAILURE` | none |
+| A status the operation does not allow, a missing body or `resourceId`, a `problemDetails` without a 4xx/5xx `status`, anything that is not a JSON object, or a JetStream acknowledgement | 500, cause `SYSTEM_FAILURE` | none |
 
-Use the application errors TS 29.503 defines for the service (`USER_NOT_FOUND` with 404, for
-example) or the common ones of TS 29.500 Table 5.2.7.2-1.
+Use the application errors TS 29.503 defines for the API (`USER_NOT_FOUND` with 404, for example) or
+the common ones of TS 29.500 Table 5.2.7.2-1.
 
 ### Application → gateway
 
@@ -53,7 +63,7 @@ example) or the common ones of TS 29.500 Table 5.2.7.2-1.
 |---------|---------|---------|
 | Deliver a notification to a network function's callback URI | `5g.data.notify` (core publish) | `NotificationPayload` |
 | Ask which SMSF serves a subscriber | `sbi.outbound.nudm.uecm.request` (core request/reply) | `NudmUecmMessage` → `NudmUecmMessage` |
-| Send an SMS through the serving SMSF (Nsmsf_SMService SendSMS) | `sbi.outbound.nsmsf.send.request` (JetStream work queue) | `SbiOtaMessage` |
+| Send an MT SMS through the serving SMSF (Nsmsf_SMService MtForwardSm; the SMS as an RP-DATA) | `sbi.outbound.nsmsf.send.request` (JetStream work queue) | `SbiOtaMessage` |
 | Result of each SMS the gateway processed | `ota.delivery.event` | `DeliveryEvent` |
 
 `sbi.outbound.nsmsf.send.request` is the one subject that is meant to be in a stream: your
@@ -69,21 +79,29 @@ A UDM back end answering generate-auth-data:
 nc, err := nats.Connect(natsURL)
 if err != nil { /* ... */ }
 
+respond := func(m *nats.Msg, v any) {
+	data, _ := json.Marshal(v)
+	_ = m.Respond(data)
+}
+
 _, err = nc.QueueSubscribe(sbiclient.SubjectAuthRequest, "udm", func(m *nats.Msg) {
-	var req sbiclient.AuthRequest
-	if err := json.Unmarshal(m.Data, &req); err != nil {
-		data, _ := json.Marshal(sbiclient.ErrorReply{ProblemDetails: sbiclient.ProblemDetails{
-			Status: 400, Cause: "INVALID_MSG_FORMAT", Detail: err.Error(),
+	var req sbiclient.Request
+	if err := json.Unmarshal(m.Data, &req); err != nil || req.Operation != "GenerateAuthData" {
+		respond(m, sbiclient.ErrorReply{ProblemDetails: sbiclient.ProblemDetails{
+			Status: 501, Detail: "operation not supported",
 		}})
-		_ = m.Respond(data) // the AUSF gets a 400 with this ProblemDetails
 		return
 	}
-	res := sbiclient.AuthenticationInfoResult{
-		Supi:       resolve(req.Supi), // req.Supi may be a SUCI
-		AuthVector: vectorFor(req.Supi, req.ServingNetworkName),
+	var info AuthenticationInfoRequest // TS 29.503, from your OpenAPI models
+	if err := json.Unmarshal(req.Body, &info); err != nil {
+		respond(m, sbiclient.ErrorReply{ProblemDetails: sbiclient.ProblemDetails{
+			Status: 400, Cause: "INVALID_MSG_FORMAT", Detail: err.Error(),
+		}}) // the AUSF gets a 400 with this ProblemDetails
+		return
 	}
-	data, _ := json.Marshal(res)
-	_ = m.Respond(data)
+	result := authenticationInfoResult(req.Params["supiOrSuci"], info) // authType, authenticationVector, supi
+	body, _ := json.Marshal(result)
+	respond(m, sbiclient.Reply{Body: body}) // 200: the operation's only success status
 })
 ```
 
