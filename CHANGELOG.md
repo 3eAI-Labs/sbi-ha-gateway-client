@@ -19,7 +19,6 @@ versioning follows [SemVer](https://semver.org/) (pre-1.0: a minor version may b
 
 - `example/`: a runnable back end (its own module) that answers the gateway's requests on NATS: a
   starting point, not a UDM.
-
 - `SbiRouting.SmsfInstanceId` (`smsfInstanceId`, optional): the SMSF's NF instance ID, as the SMSF
   registered it with the UDM (TS 29.503 SmsfRegistration). A gateway that registers an SMS_GMSC
   profile finds the SMSF with NRF discovery and sends the SMS there, `SmsfFqdn` unused; without

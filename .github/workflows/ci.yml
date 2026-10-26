@@ -32,6 +32,10 @@ jobs:
       - name: Dependency licences are permissive
         # This module is Apache-2.0 and is linked into applications of any licence:
         # a copyleft dependency here would defeat the reason it is separate.
+        # The tool needs a newer Go than the module's minimum, which the tests above run on;
+        # setup-go pins the toolchain (GOTOOLCHAIN=local), so let go fetch the tool's.
+        env:
+          GOTOOLCHAIN: auto
         run: |
           go run github.com/google/go-licenses/v2@v2.0.1 check ./... \
             --allowed_licenses=Apache-2.0,MIT,BSD-2-Clause,BSD-3-Clause,ISC
