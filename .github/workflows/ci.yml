@@ -16,8 +16,8 @@ jobs:
     name: Vet + tests + licences
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
           cache: false   # no dependencies, no go.sum
@@ -34,4 +34,24 @@ jobs:
         # a copyleft dependency here would defeat the reason it is separate.
         run: |
           go run github.com/google/go-licenses/v2@v2.0.1 check ./... \
+            --allowed_licenses=Apache-2.0,MIT,BSD-2-Clause,BSD-3-Clause,ISC
+
+  example:
+    name: Example back end builds
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: example/go.mod
+          cache-dependency-path: example/go.sum
+      - name: go vet and build
+        working-directory: example
+        run: go vet ./... && go build -o /dev/null .
+      - name: Dependency licences are permissive
+        # This repository's own modules carry their Apache-2.0 header (the test job checks it).
+        working-directory: example
+        run: |
+          go run github.com/google/go-licenses/v2@v2.0.1 check ./... \
+            --ignore github.com/3eAI-Labs/sbi-ha-gateway-client \
             --allowed_licenses=Apache-2.0,MIT,BSD-2-Clause,BSD-3-Clause,ISC

@@ -46,19 +46,21 @@ const (
 	// "GET_UE_CONTEXT") → NudmUecmMessage (Operation "RESPONSE") naming the SMSF that
 	// serves the subscriber, or an HTTP status and problem cause when there is none.
 	SubjectUecmRequest = "sbi.outbound.nudm.uecm.request"
-	// SubjectSmsfSendRequest is a JetStream work-queue subject carrying an SbiOtaMessage:
+	// SubjectSmsfSendRequest is a JetStream work-queue subject carrying an SmsMessage:
 	// the gateway sends the SMS with Nsmsf_SMService MtForwardSm (TS 29.540) and publishes a
-	// DeliveryEvent. The stream (StreamSmsfSend) belongs to the application; the gateway
-	// only creates its durable consumer (ConsumerSmsfSend) on it.
+	// DeliveryEvent. The gateway creates its durable consumer (ConsumerSmsfSend) on the
+	// stream that captures it (StreamSmsfSend, by default), and the stream too when there is
+	// none.
 	SubjectSmsfSendRequest = "sbi.outbound.nsmsf.send.request"
 )
 
 // Gateway → application events.
 const (
-	// SubjectDeliveryEvent carries a DeliveryEvent, published once per SbiOtaMessage the
-	// gateway has processed. The gateway publishes through JetStream when it is available,
-	// so a stream on this subject is expected.
-	SubjectDeliveryEvent = "ota.delivery.event"
+	// SubjectDeliveryEvent is the default subject of the DeliveryEvent published once per
+	// SmsMessage the gateway has processed (the gateway's SMS_DELIVERY_EVENT_SUBJECT sets
+	// another). The gateway publishes through JetStream when a stream captures the subject,
+	// and as a core NATS publish otherwise.
+	SubjectDeliveryEvent = "sbi.nsmsf.delivery.event"
 	// SubjectDataNotifyFailed carries a NotificationFailure, published once for each
 	// NotificationPayload the gateway did not deliver. A core NATS publish: capture the
 	// subject in a stream to keep the events.
@@ -67,9 +69,10 @@ const (
 
 // JetStream names used with SubjectSmsfSendRequest.
 const (
-	// StreamSmsfSend is the stream, created by the application, that captures
-	// SubjectSmsfSendRequest.
-	StreamSmsfSend = "OTA_OUTBOUND"
+	// StreamSmsfSend is the default name of the stream that captures SubjectSmsfSendRequest
+	// (the gateway's SMS_STREAM sets another). The gateway creates it, a work queue with one
+	// replica, when it does not exist; create it beforehand to choose its replicas and limits.
+	StreamSmsfSend = "SBI_SMSF_SEND"
 	// ConsumerSmsfSend is the durable pull consumer the gateway creates on StreamSmsfSend.
 	ConsumerSmsfSend = "sbi-gateway-smsf"
 )

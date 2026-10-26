@@ -64,12 +64,14 @@ the common ones of TS 29.500 Table 5.2.7.2-1.
 | Deliver a notification to a network function's callback URI | `5g.data.notify` (core publish) | `NotificationPayload` |
 | A notification the gateway could not deliver, with the network function's last answer | `5g.data.notify.failed` (core publish, from the gateway) | `NotificationFailure` |
 | Ask which SMSF serves a subscriber | `sbi.outbound.nudm.uecm.request` (core request/reply) | `NudmUecmMessage` → `NudmUecmMessage` |
-| Send an MT SMS through the serving SMSF (Nsmsf_SMService MtForwardSm; the SMS as an RP-DATA) | `sbi.outbound.nsmsf.send.request` (JetStream work queue) | `SbiOtaMessage` |
-| Result of each SMS the gateway processed | `ota.delivery.event` | `DeliveryEvent` |
+| Send an MT SMS through the serving SMSF (Nsmsf_SMService MtForwardSm; the SMS as an RP-DATA) | `sbi.outbound.nsmsf.send.request` (JetStream work queue) | `SmsMessage` |
+| Result of each SMS the gateway processed | `sbi.nsmsf.delivery.event` (the gateway's `SMS_DELIVERY_EVENT_SUBJECT` sets another) | `DeliveryEvent` |
 
-`sbi.outbound.nsmsf.send.request` is the one subject that is meant to be in a stream: your
-application creates the stream `OTA_OUTBOUND` on it, and the gateway creates its durable consumer
-`sbi-gateway-smsf`. The gateway asks for redelivery (up to three deliveries) when the SMSF fails
+`sbi.outbound.nsmsf.send.request` is the one subject that is meant to be in a stream. The gateway
+creates its durable consumer `sbi-gateway-smsf` on the stream that captures it, whatever its name;
+when none does, it creates `SBI_SMSF_SEND` (its `SMS_STREAM` names another), a work queue with one
+replica. Create the stream yourself to choose its replicas and limits. The delivery events go
+through JetStream when a stream captures their subject, and as core publishes otherwise. The gateway asks for redelivery (up to three deliveries) when the SMSF fails
 transiently, and reports `PENDING` in the `DeliveryEvent` each time but the last. A transient
 failure on the third delivery is reported `FAILED` with cause `RETRIES_EXHAUSTED` and the transient
 cause in `BearerMeta` `lastCause`, so every SMS ends with `DELIVERED` or `FAILED`.

@@ -24,7 +24,7 @@ func TestWireSchema(t *testing.T) {
 	for _, root := range []any{
 		Request{}, Reply{}, NotificationPayload{}, NotificationFailure{},
 		ErrorReply{},
-		NudmUecmMessage{}, SbiOtaMessage{}, DeliveryEvent{},
+		NudmUecmMessage{}, SmsMessage{}, DeliveryEvent{},
 	} {
 		typ := reflect.TypeOf(root)
 		walk(typ.Name(), typ, map[reflect.Type]bool{}, &lines)

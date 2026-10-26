@@ -4,6 +4,30 @@ All notable changes to `sbi-ha-gateway-client` are documented in this file.
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 versioning follows [SemVer](https://semver.org/) (pre-1.0: a minor version may be breaking).
 
+## [0.4.0] — 2026-10-26
+
+### Changed — breaking
+
+- `SbiOtaMessage` is now `SmsMessage`. Its JSON is unchanged.
+- `SubjectDeliveryEvent` is `sbi.nsmsf.delivery.event` and `StreamSmsfSend` is `SBI_SMSF_SEND`:
+  defaults now, which a gateway 0.5.0 sets otherwise with `SMS_DELIVERY_EVENT_SUBJECT` and
+  `SMS_STREAM`. An application that kept the earlier names sets the gateway's variables to them.
+  Gateway 0.5.0 uses the stream that captures `sbi.outbound.nsmsf.send.request` whatever its name,
+  and creates one only when none does.
+
+### Added
+
+- `example/`: a runnable back end (its own module) that answers the gateway's requests on NATS: a
+  starting point, not a UDM.
+
+- `SbiRouting.SmsfInstanceId` (`smsfInstanceId`, optional): the SMSF's NF instance ID, as the SMSF
+  registered it with the UDM (TS 29.503 SmsfRegistration). A gateway that registers an SMS_GMSC
+  profile finds the SMSF with NRF discovery and sends the SMS there, `SmsfFqdn` unused; without
+  one, the SMS goes to `SmsfFqdn`. The `DeliveryEvent`'s `BearerMeta` then carries
+  `smsfInstanceId`.
+- `NudmUecmMessage.SmsfInstanceId` (`smsfInstanceId`, optional): the serving-SMSF lookup's reply
+  may name the SMSF by instance ID, with or instead of `SmsfFqdn`.
+
 ## [0.3.0] — 2026-10-19
 
 ### Added
@@ -20,7 +44,7 @@ versioning follows [SemVer](https://semver.org/) (pre-1.0: a minor version may b
   `Retry-After`, is not called until it has rested or the time has passed.
 
 - With gateway 0.3.0, a transient failure on the last of the three deliveries of an
-  `SbiOtaMessage` is reported `FAILED`, cause `RETRIES_EXHAUSTED`, the transient cause in
+  SMS message is reported `FAILED`, cause `RETRIES_EXHAUSTED`, the transient cause in
   `BearerMeta` `lastCause`. Before, the last event was `PENDING` and nothing followed it.
 
 ## [0.2.0] — 2026-10-19
